@@ -7,6 +7,7 @@ import sys
 import shlex
 from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import os
 
 conf_parser = ArgumentParser(add_help=False)
 conf_parser.add_argument('-f', '--config-file', dest='config_file', metavar='FILE',
@@ -33,13 +34,14 @@ parser.add_argument('-i', '--invert', dest='invert', action='store_true',
         default=False, help='Invert assumes grayscale')
 parser.add_argument('-g', '--grayscale', dest='grayscale', action='store_true',
         default=False, help='Convert output image to grayscale')
-parser.add_argument('-L', '--libdir', dest='libdir', 
-        default='/usr/local/geektool/lib', help='imageutils directory')
+parser.add_argument('-L', '--libdir', dest='libdir', help='imageutils directory')
 
 args = parser.parse_args()
 vargs = vars(args)
 
-sys.path.append(args.libdir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if args.libdir:
+    sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage
 
 services = shlex.split(args.services)

@@ -38,13 +38,14 @@ parser.add_argument('-V', '--vertical',
         dest='vertical', help='Vertical montage file')
 parser.add_argument('-H', '--horizonal',
         dest='horizontal', help='Horizonal montage file')
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR',
-        default='/usr/local/geektool/lib', help='imageutils directory')
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
 args = parser.parse_args()
 
 symbols = shlex.split(args.symbols)
 
-sys.path.append(args.libdir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if args.libdir:
+    sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage
 
 # http://chart.finance.yahoo.com/t?s=AAPL&lang=en-US&region=US&width=300&height=180

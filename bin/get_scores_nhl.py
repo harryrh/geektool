@@ -111,14 +111,15 @@ parser.add_argument('-l', '--headline', dest='headline', action='store_true', he
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true', help='Display quarter scores')
 parser.add_argument('-g', '--desaturate', dest='desaturate',
         default=False, action='store_true', help='Desaturate the image')
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR',
-        default='/usr/local/geektool/lib', help='imageutils directory')
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
 parser.add_argument('--adjust-time', dest='adjust_time', type=int, help='Adjust Gametime by hours')
 
 args = parser.parse_args()
 vargs = vars(args)
 
-sys.path.append(args.libdir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if args.libdir:
+    sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage, text_as_image
 
 try:

@@ -29,15 +29,16 @@ if args.config_file:
     defaults = dict(config.items(args.section))
     parser.set_defaults(**defaults)
 
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY',
-        default='/usr/local/geektool/lib', help='imageutils directory')
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY', help='imageutils directory')
 parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE', help='Vertical Montage File Name')
 parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', help='Horizontal Montage File Name')
 parser.add_argument('search')
 args = parser.parse_args()
 vargs = vars(args)
 
-sys.path.append(args.libdir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if args.libdir:
+    sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage
 
 uri = 'http://chrome.wunderground.com/auto/chrome/geo/wx/index.html?%s'

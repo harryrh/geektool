@@ -8,6 +8,7 @@ from ConfigParser import SafeConfigParser
 from datetime import timedelta, datetime
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import sys
+import os
 
 
 conf_parser = ArgumentParser(add_help=False)
@@ -30,12 +31,13 @@ if args.config_file:
 parser.add_argument('-a', '--apikey', dest='apikey', help='SABnzbd+ API Key')
 parser.add_argument('host', metavar='HOST', help='SABnzbd+ Host')
 parser.add_argument('port', metavar='PORT', help='SABnzbd+ Port')
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY',
-        default='/usr/local/geektool/lib', help='timeutils directory')
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY', help='timeutils directory')
 args = parser.parse_args()
 vargs = vars(args)
 
-sys.path.append(args.libdir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if args.libdir:
+    sys.path.insert(0, args.libdir)
 from timeutils import duration_human
 
 if not args.apikey:
