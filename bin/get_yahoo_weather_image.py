@@ -15,25 +15,15 @@ import re
 parser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter,
         epilog='The file is saved as IMAGE_DIR/IMAGE_NAME<extension>')
-parser.add_argument('-w', '--woeid',
-        dest='woeid',
-        default='12792014',
-        help='WOEID')
-parser.add_argument('-i', '--image-dir',
-        dest='image_dir',
-        default='/usr/local/geektool/tmp',
-        help='Directory to store images')
-parser.add_argument('-n', '--image-name',
-        dest='image_name',
-        default='yw-current-large',
-        help='Image base name')
-parser.add_argument('-u', '--units',
-        dest='units',
-        default='f',
-        help='Units f or c')
-parser.add_argument('-d', '--debug',
-        action='store_true',
-        dest='debug',
+parser.add_argument('-w', '--woeid', dest='woeid',
+        default='12792014', help='WOEID')
+parser.add_argument('-i', '--image-dir', dest='image_dir',
+        default='/usr/local/geektool/tmp', help='Directory to store images')
+parser.add_argument('-n', '--image-name', dest='image_name',
+        default='yw-current-large', help='Image base name')
+parser.add_argument('-u', '--units', dest='units', choices=['f','c'],
+        default='f', help='Units f or c')
+parser.add_argument('-d', '--debug', action='store_true', dest='debug',
         default=False)
 args = parser.parse_args()
 
