@@ -2,12 +2,12 @@
 '''Get 7 day forecast icons from Weather Underground and 
 generate a horizontal and/or montage of the icons'''
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from ConfigParser import SafeConfigParser
-import urllib
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from cStringIO import StringIO
 import os
 import sys
-from cStringIO import StringIO
+import urllib
 
 from BeautifulSoup import BeautifulStoneSoup
 from PIL import Image
@@ -29,9 +29,9 @@ if args.config_file:
     defaults = dict(config.items(args.section))
     parser.set_defaults(**defaults)
 
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY', help='imageutils directory')
 parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE', help='Vertical Montage File Name')
 parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', help='Horizontal Montage File Name')
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIRECTORY', help='imageutils directory')
 parser.add_argument('search')
 args = parser.parse_args()
 vargs = vars(args)
@@ -47,7 +47,7 @@ url = uri % urllib.urlencode({'query': args.search})
 soup = BeautifulStoneSoup(urllib.urlopen(url))
 
 images = []
-for i, d in enumerate(soup.findAll('div', attrs={'class': ['icon']})):
+for i, d in enumerate(soup.findAll('div', 'icon')):
     im = Image.open(StringIO(urllib.urlopen(d.img['src']).read()))
     images.append(im)
     
