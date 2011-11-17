@@ -1,0 +1,3 @@
+My collection of GeekTool/NerdTool scripts
+
+Most scripts use python2.7 from MacPorts.  Any external modules referenced are available on MacPorts as well.
