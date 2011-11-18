@@ -80,6 +80,63 @@ class Game():
 
 #-------------------------------------------------------------------------------
 
+def find_time_remaining(game_block):
+    remaining_block = game_block.find('span', 'time-remaining')
+
+    if remaining_block:
+        remaining = remaining_block.text.replace('&nbsp;', '')
+    else:
+        remaining = None
+
+    return remaining
+
+def find_headline(game_block):
+    headline_block = game_block.find('div', 'recap-headline')
+
+    if headline_block.contents:
+        headline = headline_block.a.text.replace('&nbsp;', '')
+    else:
+        headline = None
+
+    return headline
+
+def find_lastplay(game_block):
+    lastplay_block = g.find('span', id = re.compile('-lastPlayText$'))
+
+    if lastplay_block:
+        lastplay = lastplay_block.string.replace('&nbsp;', '')
+    else:
+        lastplay = None
+
+    return lastplay
+
+def format_record(record, f):
+    '''Reformat the team record using a passed format string expecting the keys w, l, s and p'''
+    record_re = re.compile('\((\d+)-(\d+)-(\d+),\s+(\d+) pts\)')
+    m = record_re.match(record)
+    k = ('w', 'l', 's', 'p')
+    fk = dict(zip(k, m.groups()))
+    return f.format(**fk)
+
+def find_team_info(blocks):
+    name   = blocks[0].contents[0].a.text
+    score  = blocks[0].contents[1].span.text.replace('&nbsp;','')
+    record = blocks[1].contents[0].contents[1]
+
+    return (name, score, record)
+
+#-------------------------------------------------------------------------------
+
+def get_font(name, args, default_font):
+    try:
+        font = ImageFont.truetype(args[name + '.font'], int(args[name + '.fontsize']))
+    except:
+        font = default_font
+
+    return font
+
+#-------------------------------------------------------------------------------
+
 conf_parser = ArgumentParser(add_help=False)
 conf_parser.add_argument('-f', '--config-file', dest='config_file', metavar='FILE',
         help='Config file to load')
@@ -91,12 +148,6 @@ parser = ArgumentParser(parents=[conf_parser],
         description=__doc__,
         formatter_class=ArgumentDefaultsHelpFormatter)
 
-if args.config_file:
-    config = SafeConfigParser()
-    config.read(args.config_file)
-    defaults = dict(config.items(args.section))
-    parser.set_defaults(**defaults)
-
 parser.add_argument('--font', dest='font', help='TrueType Font to Load')
 parser.add_argument('--fontsize', dest='fontsize', type=int, help='Font Size')
 parser.add_argument('--fontcolor', dest='fontcolor', help='Font Color (PIL)')
@@ -107,12 +158,22 @@ parser.add_argument('--vpad', dest='vpadding', type=int, help='Vertical Montage 
 parser.add_argument('-V', '--vertical', dest='vertical', help='Vertical Montage File Name')
 parser.add_argument('-H', '--horizontal', dest='horizontal', help='Horizontal Montage File Name')
 parser.add_argument('-S', '--slideshow', dest='slideshow', help='Slideshow Directory')
-parser.add_argument('-l', '--headline', dest='headline', action='store_true', help='Display headline')
-parser.add_argument('-q', '--quarters', dest='quarters', action='store_true', help='Display quarter scores')
-parser.add_argument('-g', '--desaturate', dest='desaturate',
-        default=False, action='store_true', help='Desaturate the image')
+parser.add_argument('-l', '--headline', dest='headline', action='store_true',
+        help='Display headline')
+parser.add_argument('-q', '--quarters', dest='quarters', action='store_true',
+        help='Display quarter scores')
+parser.add_argument('-g', '--desaturate', dest='desaturate', default=False, action='store_true',
+        help='Desaturate the image')
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
-parser.add_argument('--adjust-time', dest='adjust_time', type=int, help='Adjust Gametime by hours')
+parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
+        help='Adjust Gametime by hours')
+parser.add_argument('--prefix', dest='prefix', default='nhl-game-', help='File Name Prefix')
+
+if args.config_file:
+    config = SafeConfigParser()
+    config.read(args.config_file)
+    defaults = dict(config.items(args.section))
+    parser.set_defaults(**defaults)
 
 args = parser.parse_args()
 vargs = vars(args)
@@ -138,7 +199,6 @@ if args.date:
 gameboxes = SoupStrainer('div', id=gamebox_re)
 soup = BeautifulSoup(urllib.urlopen(url).read(), parseOnlyThese=gameboxes)
 
-
 games = []
 for g in soup.contents:
     status = []
@@ -149,16 +209,14 @@ for g in soup.contents:
 
     # Teams Info
 
-    away_name   = game_header.contents[0].contents[0].contents[0].a.text
-    away_score  = game_header.contents[0].contents[0].contents[1].span.text.replace('&nbsp;','')
-    away_record = game_header.contents[0].contents[1].contents[0].contents[1]
+    (away_name, away_score, away_record) = find_team_info(game_header.contents[0].contents[0:2])
     away_image = Image.open(vargs['image.' + normalize(away_name)]).convert('RGBA')
+
     away_team  = Team(away_name, score=away_score, record=away_record, image=away_image)
 
-    home_name   = game_header.contents[0].contents[2].contents[0].a.text
-    home_score  = game_header.contents[0].contents[2].contents[1].span.text.replace('&nbsp;','')
-    home_record = game_header.contents[0].contents[3].contents[0].contents[1]
+    (home_name, home_score, home_record) = find_team_info(game_header.contents[0].contents[2:4])
     home_image = Image.open(vargs['image.' + normalize(home_name)]).convert('RGBA')
+
     home_team  = Team(home_name, score=home_score, record=home_record, image=home_image)
 
     # Game Info
@@ -180,23 +238,9 @@ for g in soup.contents:
                 hour = hour + 12
             game_time = datetime.combine(date.today(), time(hour, minute, tzinfo=eastern)).astimezone(localtz)
 
-    remaining_block = g.find('span', attrs = { 'class': 'remaining-remaining' })
-    if remaining_block:
-        remaining = remaining_block.text.replace('&nbsp;', '')
-    else:
-        remaining = None
-
-    headline_block = g.find('div', attrs = { 'class': 'recap-headline' })
-    if headline_block.contents:
-        headline = headline_block.a.text.replace('&nbsp;', '')
-    else:
-        headline = None
-
-    lastplay_block = g.find('span', id = re.compile('-lastPlayText$'))
-    if lastplay_block:
-        lastplay = lastplay_block.string.replace('&nbsp;', '')
-    else:
-        lastplay = None
+    remaining = find_time_remaining(g)
+    headline = find_headline(g)
+    lastplay = find_lastplay(g)
 
     game = Game(type, away_team, home_team, remaining=remaining, time=game_time, 
             headline=headline, status=status, tv=tv, lastplay=lastplay)
@@ -205,29 +249,19 @@ for g in soup.contents:
 try:
     font = ImageFont.truetype(args.font, args.fontsize)
 except:
+    print >>sys.stderr, "Unable to load font or no font specified"
     font = ImageFont.load_default()
 
-try:
-    record_font = ImageFont.truetype(vargs['record.font'], int(vargs['record.fontsize']))
-except:
-    record_font = font
+record_font = get_font('record', vargs, font)
+headline_font = get_font('headline', vargs, font)
+lastplay_font = get_font('lastplay', vargs, font)
+tv_font = get_font('tv', vargs, font)
+date_font = get_font('date', vargs, font)
 
-try:
-    headline_font = ImageFont.truetype(vargs['headline.font'], int(vargs['headline.fontsize']))
-except:
-    headline_font = font
-
-try:
-    lastplay_font = ImageFont.truetype(vargs['lastplay.font'], int(vargs['lastplay.fontsize']))
-except:
-    lastplay_font = font
-
-def format_record(record, f):
-    record_re = re.compile('\((\d+)-(\d+)-(\d+),\s+(\d+) pts\)')
-    m = record_re.match(record)
-    k = ('w', 'l', 's', 'p')
-    fk = dict(zip(k, m.groups()))
-    return f.format(**fk)
+if args.fontcolor:
+    fontcolor = args.fontcolor
+else:
+    fontcolor = 'white'
 
 images = []
 for i, game in enumerate(games):
@@ -236,34 +270,42 @@ for i, game in enumerate(games):
     # Team images
     away_image = game.away_team.image
     home_image = game.home_team.image
+
+    # Display the teams record if it is pre-game
     if game.type == 'pregame':
         f = '{w}-{l}-{s} ({p})'
-        ari = text_as_image(format_record(game.away_team.record, f), font=record_font, fill=args.fontcolor)
+
+        ari = text_as_image(format_record(game.away_team.record, f), font=record_font, fill=fontcolor)
         away_image = vertical_montage([away_image, ari], halign='center')
-        hri = text_as_image(format_record(game.home_team.record, f), font=record_font, fill=args.fontcolor)
+
+        hri = text_as_image(format_record(game.home_team.record, f), font=record_font, fill=fontcolor)
         home_image = vertical_montage([home_image, hri], halign='center')
 
+    # Team Icons
     im.append(horizontal_montage([away_image, home_image], spacing=args.spacing))
 
-    # Score or game time
-    if game.type == 'in-progress' or game.type == 'final':
-        im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=args.fontcolor))
-    elif game.type == 'pregame':
-        im.append(text_as_image(game.time.strftime('%l:%M %p %Z'), font=font, fill=args.fontcolor))
-        if game.tv:
-            im.append(text_as_image(game.tv, font=font, fill=args.fontcolor))
-
-    if game.type == 'final' and args.headline:
-        im.append(text_as_image(game.headline, font=headline_font, fill=args.fontcolor))
 
     if game.type == 'final':
-        im.append(text_as_image(game.status[0], font=font, fill=args.fontcolor))
+        # Display the current/final score
+        im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
+        # Display the game 'headline' if desired (Final only)
+        if args.headline:
+            im.append(text_as_image(game.headline, font=headline_font, fill=fontcolor))
+        im.append(text_as_image(game.status[0], font=font, fill=fontcolor))
 
-    # Time in the game
-    if game.type == 'in-progress':
-        im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=font, fill=args.fontcolor))
+    # Display some game info
+    elif game.type == 'in-progress':
+        # Display the current score and game status
+        im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
+        im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=font, fill=fontcolor))
         #if game.lastplay:
-        #    im.append(text_as_image(game.lastplay, font=lastplay_font, fill=args.fontcolor))
+        #    im.append(text_as_image(game.lastplay, font=lastplay_font, fill=fontcolor))
+
+    elif game.type == 'pregame':
+        # Display when the game will take place and the tv network
+        im.append(text_as_image(game.time.strftime('%l:%M %p %Z'), font=date_font, fill=fontcolor))
+        if game.tv:
+            im.append(text_as_image(game.tv, font=tv_font, fill=fontcolor))
         
     image = vertical_montage(im, spacing=0, valign='center')
     images.append(image)
@@ -274,12 +316,12 @@ if args.slideshow:
 
     # Clean the directory
     for file in os.listdir(args.slideshow):
-        if file.startswith('nhl-game-'):
+        if file.startswith(args.prefix):
             os.remove(os.path.join(args.slideshow, file))
     
     # Save all the files
     for i, image in enumerate(images):
-        filename = os.path.join(args.slideshow, 'nhl-game-%02d.png' % i)
+        filename = os.path.join(args.slideshow, '%s-%02d.png' % (args.prefix, i))
         image.save(filename)
 
 if args.vertical:
