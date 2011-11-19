@@ -40,7 +40,7 @@ class Team():
         self.record = record
         self.image = image
 
-    def __repr__(self):
+    def __str__(self):
 
         info = []
         info.append('<Team')
@@ -63,7 +63,7 @@ class Game():
         self.headline = headline
         self.date = date
 
-    def __repr__(self):
+    def __str__(self):
 
         info = []
         info.append('<Game')
