@@ -1,19 +1,19 @@
 #!/opt/local/bin/python2.7
 '''Get NHL Scores from ESPN'''
 
-from BeautifulSoup import BeautifulSoup, SoupStrainer
-from ConfigParser import SafeConfigParser
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import re
 import sys
 import urllib
 import os
 from datetime import time, datetime, date
+from ConfigParser import SafeConfigParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
+from BeautifulSoup import BeautifulSoup, SoupStrainer
 from PIL import Image, ImageFont
-
 from pytz import timezone
 
+# ESPN reports time in ET
 eastern = timezone('US/Eastern')
 
 #-------------------------------------------------------------------------------
@@ -164,10 +164,17 @@ parser.add_argument('-q', '--quarters', dest='quarters', action='store_true',
         help='Display quarter scores')
 parser.add_argument('-g', '--desaturate', dest='desaturate', default=False, action='store_true',
         help='Desaturate the image')
-parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
 parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
-        help='Adjust Gametime by hours')
+        help='Format for date for game time (strftime)')
 parser.add_argument('--prefix', dest='prefix', default='nhl-game-', help='File Name Prefix')
+parser.add_argument('--timestamp', dest='timestamp', action='store_true', default=False,
+        help='Add a timestamp to the image')
+parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
+        help='Format for timestamp (strftime)')
+parser.add_argument('--timezone', dest='tz', default='US/Central', help='Local timezone')
+
+parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', 
+        help='imageutils.py directory to search before "__file__/../lib"')
 
 if args.config_file:
     config = SafeConfigParser()
@@ -183,10 +190,7 @@ if args.libdir:
     sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage, text_as_image
 
-try:
-    localtz = timezone(args.tz)
-except:
-    localtz = eastern
+localtz = timezone(args.tz)
 
 gamebox_re = re.compile('\d+-gamebox')
 game_header_re = re.compile('\s*game-header\s*')
@@ -257,6 +261,7 @@ headline_font = get_font('headline', vargs, font)
 lastplay_font = get_font('lastplay', vargs, font)
 tv_font = get_font('tv', vargs, font)
 date_font = get_font('date', vargs, font)
+timestamp_font = get_font('timestamp', vargs, font)
 
 if args.fontcolor:
     fontcolor = args.fontcolor
@@ -303,7 +308,7 @@ for i, game in enumerate(games):
 
     elif game.type == 'pregame':
         # Display when the game will take place and the tv network
-        im.append(text_as_image(game.time.strftime('%l:%M %p %Z'), font=date_font, fill=fontcolor))
+        im.append(text_as_image(game.time.strftime(args.date_format), font=date_font, fill=fontcolor))
         if game.tv:
             im.append(text_as_image(game.tv, font=tv_font, fill=fontcolor))
         
@@ -324,10 +329,19 @@ if args.slideshow:
         filename = os.path.join(args.slideshow, '%s-%02d.png' % (args.prefix, i))
         image.save(filename)
 
+
+if args.timestamp:
+    now = localtz.localize(datetime.now())
+    now_image = text_as_image(now.strftime(args.timestamp_format), font=timestamp_font, fill=fontcolor)
+
 if args.vertical:
     montage = vertical_montage(images, spacing=max(args.vpadding,0), halign='center', valign='center')
+    if args.timestamp:
+        montage = vertical_montage([montage, now_image], halign='center', valign='bottom')
     montage.save(args.vertical)
 
 if args.horizontal:
     montage = horizontal_montage(images, spacing=max(args.hpadding,0), halign='center', valign='top')
+    if args.timestamp:
+        montage = horizontal_montage([now_image.rotate(90), montage], spacing=1, valign='center')
     montage.save(args.horizontal)

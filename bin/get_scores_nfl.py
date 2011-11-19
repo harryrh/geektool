@@ -78,6 +78,14 @@ class Game():
 
 #-------------------------------------------------------------------------------
 
+def get_font(name, args, default_font):
+    try:
+        font = ImageFont.truetype(args[name + '.font'], int(args[name + '.fontsize']))
+    except:
+        font = default_font
+
+#-------------------------------------------------------------------------------
+
 conf_parser = ArgumentParser(add_help=False)
 conf_parser.add_argument('-f', '--config-file', dest='config_file', metavar='FILE',
         help='Config file to load')
@@ -88,12 +96,6 @@ args, remaining_argv = conf_parser.parse_known_args()
 parser = ArgumentParser(parents=[conf_parser],
         description=__doc__,
         formatter_class=ArgumentDefaultsHelpFormatter)
-
-if args.config_file:
-    config = SafeConfigParser()
-    config.read(args.config_file)
-    defaults = dict(config.items(args.section))
-    parser.set_defaults(**defaults)
 
 parser.add_argument('--font', dest='font', help='TrueType Font to Load')
 parser.add_argument('--fontsize', dest='fontsize', type=int, help='Font Size')
@@ -116,6 +118,12 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument('-n', '--next-week', dest='next_week', action='store_true', help='Next week')
 group.add_argument('-p', '--previous-week', dest='prev_week', action='store_true', help='Previous week')
 group.add_argument('-w', '--week', dest='week', type=int, help='Specify Week')
+
+if args.config_file:
+    config = SafeConfigParser()
+    config.read(args.config_file)
+    defaults = dict(config.items(args.section))
+    parser.set_defaults(**defaults)
 
 args = parser.parse_args()
 vargs = vars(args)
@@ -218,30 +226,11 @@ try:
 except:
     font = ImageFont.load_default()
 
-try:
-    record_font = ImageFont.truetype(vargs['record.font'], int(vargs['record.fontsize']))
-except:
-    record_font = font
-
-try:
-    headline_font = ImageFont.truetype(vargs['headline.font'], int(vargs['headline.fontsize']))
-except:
-    headline_font = font
-
-try:
-    date_font = ImageFont.truetype(vargs['date.font'], int(vargs['date.fontsize']))
-except:
-    date_font = font
-
-try:
-    quarter_font = ImageFont.truetype(vargs['quarter.font'], int(vargs['quarter.fontsize']))
-except:
-    quarter_font = font
-
-try:
-    tv_font = ImageFont.truetype(vargs['tv.font'], int(vargs['tv.fontsize']))
-except:
-    tv_font = font
+record_font = get_font('record', vargs, font)
+headline_font = get_font('headline', vargs, font)
+date_font = get_font('date', vargs, font)
+quarter_font = get_font('quarter', vargs, font)
+tv_font = get_font('tv', vargs, font)
 
 fontcolor = 'white'
 if args.fontcolor:
