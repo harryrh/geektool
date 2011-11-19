@@ -171,7 +171,7 @@ parser.add_argument('--timestamp', dest='timestamp', action='store_true', defaul
         help='Add a timestamp to the image')
 parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
         help='Format for timestamp (strftime)')
-parser.add_argument('--timezone', dest='tz', default='US/Central', help='Local timezone')
+parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local timezone')
 
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', 
         help='imageutils.py directory to search before "__file__/../lib"')
@@ -190,7 +190,7 @@ if args.libdir:
     sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage, text_as_image
 
-localtz = timezone(args.tz)
+localtz = timezone(args.timezone)
 
 gamebox_re = re.compile('\d+-gamebox')
 game_header_re = re.compile('\s*game-header\s*')

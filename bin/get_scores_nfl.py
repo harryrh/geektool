@@ -79,10 +79,13 @@ class Game():
 #-------------------------------------------------------------------------------
 
 def get_font(name, args, default_font):
+
     try:
         font = ImageFont.truetype(args[name + '.font'], int(args[name + '.fontsize']))
     except:
         font = default_font
+
+    return font
 
 #-------------------------------------------------------------------------------
 
@@ -112,7 +115,11 @@ parser.add_argument('-q', '--quarters', dest='quarters', action='store_true', he
 parser.add_argument('-g', '--desaturate', dest='desaturate',
         default=False, action='store_true', help='Desaturate the image')
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
-parser.add_argument('--adjust-time', dest='adjust_time', type=int, help='Adjust Gametime by hours')
+parser.add_argument('--timestamp', dest='timestamp', action='store_true', default=False,
+        help='Add a timestamp to the image')
+parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
+        help='Format for timestamp (strftime)')
+parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local Time Zone')
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-n', '--next-week', dest='next_week', action='store_true', help='Next week')
@@ -129,7 +136,7 @@ args = parser.parse_args()
 vargs = vars(args)
 
 try:
-    localtz = timezone(args.tz)
+    localtz = timezone(args.timezone)
 except:
     localtz = eastern
 
@@ -226,11 +233,15 @@ try:
 except:
     font = ImageFont.load_default()
 
+print 'font:', font
+
 record_font = get_font('record', vargs, font)
+print 'record font:', record_font
 headline_font = get_font('headline', vargs, font)
 date_font = get_font('date', vargs, font)
 quarter_font = get_font('quarter', vargs, font)
 tv_font = get_font('tv', vargs, font)
+timestamp_font = get_font('timestamp', vargs, font)
 
 fontcolor = 'white'
 if args.fontcolor:
@@ -307,11 +318,17 @@ if args.slideshow:
 
 week_im = text_as_image("WEEK %s" % week, font=font, fill=fontcolor)
 
+if args.timestamp:
+    now = localtz.localize(datetime.now())
+    now_image = text_as_image(now.strftime(args.timestamp_format), font=timestamp_font, fill=fontcolor)
+
 if not images:
     images = [text_as_image('No Games', font=font, fill=fontcolor)]
 
 if args.vertical:
     montage = vertical_montage(images, spacing=max(int(args.vpad),0), halign='center')
+    if args.timestamp:
+        montage = vertical_montage([now_image, montage], halign='center')
     montage = vertical_montage([week_im, montage], halign='center')
     if args.desaturate:
         montage = montage.convert('LA')
@@ -319,6 +336,8 @@ if args.vertical:
 
 if args.horizontal:
     montage = horizontal_montage(images, spacing=max(int(args.hpad),0), valign='top')
+    if args.timestamp:
+        montage = horizontal_montage([now_image.rotate(90), montage], valign='center')
     montage = horizontal_montage([week_im.rotate(90), montage], valign='center')
     if args.desaturate:
         montage = montage.convert('LA')
