@@ -5,7 +5,7 @@ import re
 import sys
 import urllib
 import os
-from datetime import time, datetime, date
+from datetime import time, datetime, date, timedelta
 from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
@@ -118,12 +118,20 @@ def format_record(record, f):
     fk = dict(zip(k, m.groups()))
     return f.format(**fk)
 
-def find_team_info(blocks):
-    name   = blocks[0].contents[0].a.text
-    score  = blocks[0].contents[1].span.text.replace('&nbsp;','')
-    record = blocks[1].contents[0].contents[1]
+def find_team_info(game_header, boxid, homeaway):
+    header = game_header.find('tr', id='%s-%sHeader' % (boxid, homeaway))
+
+    name_block = header.find('td', 'team-name')
+    name = name_block.div.a.text
+
+    score_block = header.find('span', id='%s-%sHeaderScore' % (boxid, homeaway))
+    score = score_block.text
+
+    next = header.nextSibling
+    record = next.td.text.replace('&nbsp;', '')
 
     return (name, score, record)
+
 
 #-------------------------------------------------------------------------------
 
@@ -155,23 +163,26 @@ parser.add_argument('-d', '--date', dest='date', metavar='YYYYMMDD', help='Speci
 parser.add_argument('--spacing', dest='spacing', type=int, help='Spacing between Logos')
 parser.add_argument('--hpad', dest='hpadding', type=int, help='Horizontal Montage Spacing')
 parser.add_argument('--vpad', dest='vpadding', type=int, help='Vertical Montage Spacing')
-parser.add_argument('-V', '--vertical', dest='vertical', help='Vertical Montage File Name')
-parser.add_argument('-H', '--horizontal', dest='horizontal', help='Horizontal Montage File Name')
-parser.add_argument('-S', '--slideshow', dest='slideshow', help='Slideshow Directory')
+parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE', help='Vertical Montage File Name')
+parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', help='Horizontal Montage File Name')
+parser.add_argument('-S', '--slideshow', dest='slideshow', metavar='DIR', help='Slideshow Directory')
 parser.add_argument('-l', '--headline', dest='headline', action='store_true',
         help='Display headline')
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true',
         help='Display quarter scores')
 parser.add_argument('-g', '--desaturate', dest='desaturate', default=False, action='store_true',
         help='Desaturate the image')
-parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
-        help='Format for date for game time (strftime)')
 parser.add_argument('--prefix', dest='prefix', default='nhl-game-', help='File Name Prefix')
 parser.add_argument('--timestamp', dest='timestamp', action='store_true', default=False,
         help='Add a timestamp to the image')
 parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
         help='Format for timestamp (strftime)')
 parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local timezone')
+
+parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
+        help='Format for date for game time (strftime)')
+parser.add_argument('-y', '--yesterday', dest='yesterday', action='store_true', default=False,
+        help='Get scores from yesterday')
 
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', 
         help='imageutils.py directory to search before "__file__/../lib"')
@@ -196,51 +207,67 @@ gamebox_re = re.compile('\d+-gamebox')
 game_header_re = re.compile('\s*game-header\s*')
 date_re = re.compile('(\d+):(\d+) ([AP]M) ET')
 
+game_time_re = re.compile('(\d+):(\d+) ([AP]M) ET')
+
 url = 'http://scores.espn.go.com/nhl/scoreboard'
 if args.date:
     url = url + '?' + urllib.urlencode({ 'date': args.date })
 
+if args.yesterday:
+    yesterday = localtz.localize(datetime.now()) - timedelta(1)
+    date_str = yesterday.strftime('%Y%m%d')
+    url = url + '?' + urllib.urlencode({ 'date': date_str })
+
 gameboxes = SoupStrainer('div', id=gamebox_re)
-soup = BeautifulSoup(urllib.urlopen(url).read(), parseOnlyThese=gameboxes)
+html = urllib.urlopen(url).read()
+
+soup = BeautifulSoup(html, parseOnlyThese=gameboxes)
+
+
+def get_team(header, boxid, homeaway, args):
+    (name, score, record) = find_team_info(game_header, boxid, homeaway)
+
+    image = Image.open(args['image.' + normalize(name)])
+
+    return Team(name, score=score, record=record, image=image)
 
 games = []
 for g in soup.contents:
-    status = []
+    # print g.prettify()
+    boxid = g['id'].split('-')[0]
     type = g['class'].split(" ")[3]
-    header = g.find('div', attrs = { 'class': game_header_re })
 
+    header = g.find('div', id='%s-gameHeader' % boxid)
     [game_header, game_info] = header.contents[0:2]
 
-    # Teams Info
-
-    (away_name, away_score, away_record) = find_team_info(game_header.contents[0].contents[0:2])
-    away_image = Image.open(vargs['image.' + normalize(away_name)]).convert('RGBA')
-
-    away_team  = Team(away_name, score=away_score, record=away_record, image=away_image)
-
-    (home_name, home_score, home_record) = find_team_info(game_header.contents[0].contents[2:4])
-    home_image = Image.open(vargs['image.' + normalize(home_name)]).convert('RGBA')
-
-    home_team  = Team(home_name, score=home_score, record=home_record, image=home_image)
+    away_team  = get_team(game_header, boxid, 'away', vargs)
+    home_team  = get_team(game_header, boxid, 'home', vargs)
 
     # Game Info
-
-    status.append(game_info.contents[0].text.replace('&nbsp;',''))
-    status.append(game_info.contents[1].contents[0].text.replace('&nbsp;',''))
-    status.append(game_info.contents[1].contents[1].text.replace('&nbsp;',''))
 
     tv = None
     game_time = None
     if type == 'pregame':
-        tv = status[0]
-        upcoming = date_re.match(status[1])
-        if upcoming:
-            hour = int(upcoming.group(1))
-            minute = int(upcoming.group(2))
-            ampm = upcoming.group(3)
-            if ampm == 'PM' and int(hour) < 12:
-                hour = hour + 12
-            game_time = datetime.combine(date.today(), time(hour, minute, tzinfo=eastern)).astimezone(localtz)
+        network_block = game_info.find('li', id='%s-statusLine1' % boxid)
+        tv = network_block.text.replace('&nbsp;','')
+
+        time_block = game_info.find('span', id='%s-statusLine2Left' % boxid)
+        
+        upcoming = game_time_re.match(time_block.text)
+        hour = int(upcoming.group(1))
+        minute = int(upcoming.group(2))
+        ampm = upcoming.group(3)
+        if ampm == 'PM' and int(hour) < 12:
+            hour = hour + 12
+        game_time = datetime.combine(date.today(), time(hour, minute, tzinfo=eastern)).astimezone(localtz)
+
+    elif type == 'final':
+        status_block = game_info.find('li', id='%s-statusLine1' % boxid)
+
+    status = []
+    status.append(game_info.contents[0].text.replace('&nbsp;',''))
+    status.append(game_info.contents[1].contents[0].text.replace('&nbsp;',''))
+    status.append(game_info.contents[1].contents[1].text.replace('&nbsp;',''))
 
     remaining = find_time_remaining(g)
     headline = find_headline(g)
@@ -326,7 +353,7 @@ if args.slideshow:
     
     # Save all the files
     for i, image in enumerate(images):
-        filename = os.path.join(args.slideshow, '%s-%02d.png' % (args.prefix, i))
+        filename = os.path.join(args.slideshow, '%s%02d.png' % (args.prefix, i))
         image.save(filename)
 
 
