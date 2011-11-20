@@ -335,7 +335,19 @@ for i, game in enumerate(games):
 
     elif game.type == 'pregame':
         # Display when the game will take place and the tv network
-        im.append(text_as_image(game.time.strftime(args.date_format), font=date_font, fill=fontcolor))
+
+        date_str = game.time.strftime(args.date_format)
+
+        timecolor = fontcolor
+
+        how_long = game.time - localtz.localize(datetime.now())
+        if how_long.total_seconds() < 900:
+            timecolor = red
+        elif how_long.total_seconds() < 3600:
+            timecolor = 'yellow'
+
+        im.append(text_as_image(date_str, font=date_font, fill=timecolor))
+
         if game.tv:
             im.append(text_as_image(game.tv, font=tv_font, fill=fontcolor))
         
