@@ -181,6 +181,7 @@ parser.add_argument('--timezone', dest='timezone', default='US/Central', help='L
 
 parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
         help='Format for date for game time (strftime)')
+parser.add_argument('--record-format', dest='record_format', default='{w}-{l}-{s} ({p})', help='Team Record format')
 parser.add_argument('-y', '--yesterday', dest='yesterday', action='store_true', default=False,
         help='Get scores from yesterday')
 
@@ -308,12 +309,11 @@ for i, game in enumerate(games):
 
     # Display the teams record if it is pre-game
     if game.type == 'pregame':
-        f = '{w}-{l}-{s} ({p})'
 
-        ari = text_as_image(format_record(game.away_team.record, f), font=fonts['record'], fill=fontcolor)
+        ari = text_as_image(format_record(game.away_team.record, args.record_format), font=fonts['record'], fill=fontcolor)
         away_image = vertical_montage([away_image, ari], halign='center')
 
-        hri = text_as_image(format_record(game.home_team.record, f), font=fonts['record'], fill=fontcolor)
+        hri = text_as_image(format_record(game.home_team.record, args.record_format), font=fonts['record'], fill=fontcolor)
         home_image = vertical_montage([home_image, hri], halign='center')
 
     # Team Icons
