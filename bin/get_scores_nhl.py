@@ -289,6 +289,7 @@ lastplay_font = get_font('lastplay', vargs, font)
 tv_font = get_font('tv', vargs, font)
 date_font = get_font('date', vargs, font)
 timestamp_font = get_font('timestamp', vargs, font)
+score_font = get_font('score', vargs, font)
 
 if args.fontcolor:
     fontcolor = args.fontcolor
@@ -314,21 +315,34 @@ for i, game in enumerate(games):
         home_image = vertical_montage([home_image, hri], halign='center')
 
     # Team Icons
-    im.append(horizontal_montage([away_image, home_image], spacing=args.spacing))
+    icons = horizontal_montage([away_image, home_image], spacing=args.spacing)
+    im.append(icons)
 
+    (iw, ih) = icons.size
 
     if game.type == 'final':
         # Display the current/final score
-        im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
-        # Display the game 'headline' if desired (Final only)
-        if args.headline:
-            im.append(text_as_image(game.headline, font=headline_font, fill=fontcolor))
+#       im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
+#       # Display the game 'headline' if desired (Final only)
+#       if args.headline:
+#           im.append(text_as_image(game.headline, font=headline_font, fill=fontcolor))
+#       im.append(text_as_image(game.status[0], font=font, fill=fontcolor))
+        away_si = text_as_image("%s" % game.away_team.score, font=score_font, fill=fontcolor)
+        home_si = text_as_image("%s" % game.home_team.score, font=score_font, fill=fontcolor)
+        score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
+        im.append(score_i)
+
         im.append(text_as_image(game.status[0], font=font, fill=fontcolor))
+         
 
     # Display some game info
     elif game.type == 'in-progress':
         # Display the current score and game status
-        im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
+        away_si = text_as_image("%s" % game.away_team.score, font=score_font, fill=fontcolor)
+        home_si = text_as_image("%s" % game.home_team.score, font=score_font, fill=fontcolor)
+        score_i = horizontal_montage([away_is, home_is], min_width=iw/2, valign='center', halign='center')
+        im.append(score_i)
+
         im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=font, fill=fontcolor))
         #if game.lastplay:
         #    im.append(text_as_image(game.lastplay, font=lastplay_font, fill=fontcolor))

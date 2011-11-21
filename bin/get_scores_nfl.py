@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import urllib
+from textwrap import fill, wrap
 
 eastern = timezone('US/Eastern')
 
@@ -144,11 +145,30 @@ def render_game(game, fonts, fontcolor):
             game_images.append(quarters_image)
         else:
             # Summary score
-            game_images.append(text_as_image("%s - %s" % (game.away_team.scores[5], game.home_team.scores[5]),
-                font=fonts['default'], fill=fontcolor))
+            #game_images.append(text_as_image("%s - %s" % (game.away_team.scores[5], game.home_team.scores[5]),
+            #    font=fonts['default'], fill=fontcolor))
+            (iw, ih) = icons.size
+            away_i = text_as_image("%s" % game.away_team.scores[5], font=fonts['score'], fill=fontcolor)
+            home_i = text_as_image("%s" % game.home_team.scores[5], font=fonts['score'], fill=fontcolor)
+            game_images.append(horizontal_montage([away_i, home_i], min_width=iw/2, halign='center', valign='center'))
+
         game_images.append(text_as_image(game.status, font=fonts['default'], fill=fontcolor))
-        if game.headline and args.headline:
-            game_images.append(text_as_image(game.headline, font=fonts['headline'], fill=fontcolor))
+
+        if args.headline and game.headline:
+            hi = []
+            for str in wrap(game.headline, 50):
+                hi.append(text_as_image(str, font=fonts['headline'], fill=fontcolor))
+            game_images.append(vertical_montage(hi, halign='left'))
+
+        if args.lastplay and game.lastplay:
+            li = []
+            for str in wrap(game.lastplay, 50):
+                li.append(text_as_image(str, font=fonts['lastplay'], fill=fontcolor))
+            game_images.append(vertical_montage(li, halign='left'))
+
+        if game.type == 'in-game':
+            game_images.append(text_as_image(game.tv, font=fonts['tv'], fill='yellow'))
+
 
     return vertical_montage(game_images, halign='center', spacing=0)
 
@@ -157,6 +177,8 @@ def render_games(games, fonts, fontcolor):
     for game in games:
         game_images.append(render_game(game, fonts, fontcolor))
     return game_images
+
+#-------------------------------------------------------------------------------
 
 conf_parser = ArgumentParser(add_help=False)
 conf_parser.add_argument('-f', '--config-file', dest='config_file', metavar='FILE',
@@ -181,6 +203,7 @@ parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', hel
 parser.add_argument('-S', '--slideshow', dest='slideshow', help='Slideshow Directory')
 parser.add_argument('-l', '--headline', dest='headline', action='store_true', help='Display headline')
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true', help='Display quarter scores')
+parser.add_argument('--lastplay', dest='lastplay', action='store_true', help='Display last play summary')
 parser.add_argument('-g', '--desaturate', dest='desaturate',
         default=False, action='store_true', help='Desaturate the image')
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', help='imageutils directory')
@@ -190,6 +213,7 @@ parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%
         help='Format for timestamp (strftime)')
 parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local Time Zone')
 parser.add_argument('--date-format', dest='date_format', default='%a %l:%M %p %Z', metavar='FORMAT', help='Date format')
+parser.add_argument('-T', '--type', dest='types', action='append', help='Filter to game types', choices=['in-game', 'preview', 'final-state'])
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-n', '--next-week', dest='next_week', action='store_true', help='Next week')
@@ -282,6 +306,9 @@ for date_block in dates:
             blockid = game_block['id'].split('-')[0]
             type = game_block['class'].split(' ')[3]
 
+            if args.types and type not in args.types:
+                continue
+
             status_block = game_block.find('p', id='%s-statusText' % blockid)
             status = status_block.text.replace('&nbsp;', '').strip()
 
@@ -300,10 +327,16 @@ for date_block in dates:
                     game_time = time(int(hour), int(minute), tzinfo=eastern)
                     game_date = datetime.combine(game_date, game_time).astimezone(localtz)
 
+                tv_block = game_block.find('div', id='%s-preTV' % blockid)
+                tv = tv_block.p.text.replace('&nbsp;', '').strip()
+
             elif type == 'in-game':
 
                 lastplay_block = game_block.find('div', id='%s-lastPlayText' % blockid)
                 lastplay = lastplay_block.text.replace('&nbsp;', '')
+
+                tv_block = game_block.find('div', id='%s-flagBar' % blockid)
+                tv = tv_block.text.replace('&nbsp;', '').strip()
                     
                 pass
 
@@ -314,8 +347,6 @@ for date_block in dates:
 
                 pass
 
-            tv_block = game_block.find('div', id='%s-preTV' % blockid)
-            tv = tv_block.p.text.replace('&nbsp;', '').strip()
 
             away_block = game_block.find('div', 'team visitor')
             away_team = parse_team_block(away_block, blockid, 'a')
@@ -342,6 +373,8 @@ fonts['quarter'] = get_font('quarter', vargs, fonts['default'])
 fonts['tv'] = get_font('tv', vargs, fonts['default'])
 fonts['timestamp'] = get_font('timestamp', vargs, fonts['default'])
 fonts['week'] = get_font('week', vargs, fonts['default'])
+fonts['lastplay'] = get_font('lastplay', vargs, fonts['default'])
+fonts['score'] = get_font('score', vargs, fonts['default'])
 
 fontcolor = 'white'
 if args.fontcolor:
