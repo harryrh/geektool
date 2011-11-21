@@ -277,19 +277,21 @@ for g in soup.contents:
             headline=headline, status=status, tv=tv, lastplay=lastplay)
     games.append(game)
 
+fonts = {}
+
 try:
-    font = ImageFont.truetype(args.font, args.fontsize)
+    fonts['default'] = ImageFont.truetype(args.font, args.fontsize)
 except:
     print >>sys.stderr, "Unable to load font or no font specified"
-    font = ImageFont.load_default()
+    fonts['default'] = ImageFont.load_default()
 
-record_font = get_font('record', vargs, font)
-headline_font = get_font('headline', vargs, font)
-lastplay_font = get_font('lastplay', vargs, font)
-tv_font = get_font('tv', vargs, font)
-date_font = get_font('date', vargs, font)
-timestamp_font = get_font('timestamp', vargs, font)
-score_font = get_font('score', vargs, font)
+fonts['record'] = get_font('record', vargs, fonts['default'])
+fonts['headline'] = get_font('headline', vargs, fonts['default'])
+fonts['lastplay'] = get_font('lastplay', vargs, fonts['default'])
+fonts['tv'] = get_font('tv', vargs, fonts['default'])
+fonts['date'] = get_font('date', vargs, fonts['default'])
+fonts['timestamp'] = get_font('timestamp', vargs, fonts['default'])
+fonts['score'] = get_font('score', vargs, fonts['default'])
 
 if args.fontcolor:
     fontcolor = args.fontcolor
@@ -308,10 +310,10 @@ for i, game in enumerate(games):
     if game.type == 'pregame':
         f = '{w}-{l}-{s} ({p})'
 
-        ari = text_as_image(format_record(game.away_team.record, f), font=record_font, fill=fontcolor)
+        ari = text_as_image(format_record(game.away_team.record, f), font=fonts['record'], fill=fontcolor)
         away_image = vertical_montage([away_image, ari], halign='center')
 
-        hri = text_as_image(format_record(game.home_team.record, f), font=record_font, fill=fontcolor)
+        hri = text_as_image(format_record(game.home_team.record, f), font=fonts['record'], fill=fontcolor)
         home_image = vertical_montage([home_image, hri], halign='center')
 
     # Team Icons
@@ -322,30 +324,25 @@ for i, game in enumerate(games):
 
     if game.type == 'final':
         # Display the current/final score
-#       im.append(text_as_image("%s - %s" % (game.away_team.score, game.home_team.score), font=font, fill=fontcolor))
-#       # Display the game 'headline' if desired (Final only)
-#       if args.headline:
-#           im.append(text_as_image(game.headline, font=headline_font, fill=fontcolor))
-#       im.append(text_as_image(game.status[0], font=font, fill=fontcolor))
-        away_si = text_as_image("%s" % game.away_team.score, font=score_font, fill=fontcolor)
-        home_si = text_as_image("%s" % game.home_team.score, font=score_font, fill=fontcolor)
+        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=fontcolor)
+        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=fontcolor)
         score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
 
-        im.append(text_as_image(game.status[0], font=font, fill=fontcolor))
+        im.append(text_as_image(game.status[0], font=fonts['default'], fill=fontcolor))
          
 
     # Display some game info
     elif game.type == 'in-progress':
         # Display the current score and game status
-        away_si = text_as_image("%s" % game.away_team.score, font=score_font, fill=fontcolor)
-        home_si = text_as_image("%s" % game.home_team.score, font=score_font, fill=fontcolor)
+        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=fontcolor)
+        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=fontcolor)
         score_i = horizontal_montage([away_is, home_is], min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
 
-        im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=font, fill=fontcolor))
+        im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=fonts['default'], fill=fontcolor))
         #if game.lastplay:
-        #    im.append(text_as_image(game.lastplay, font=lastplay_font, fill=fontcolor))
+        #    im.append(text_as_image(game.lastplay, font=fonts['lastplay'], fill=fontcolor))
 
     elif game.type == 'pregame':
         # Display when the game will take place and the tv network
@@ -360,10 +357,10 @@ for i, game in enumerate(games):
         elif how_long.total_seconds() < 3600:
             timecolor = 'yellow'
 
-        im.append(text_as_image(date_str, font=date_font, fill=timecolor))
+        im.append(text_as_image(date_str, font=fonts['date'], fill=timecolor))
 
         if game.tv:
-            im.append(text_as_image(game.tv, font=tv_font, fill=fontcolor))
+            im.append(text_as_image(game.tv, font=fonts['tv'], fill=fontcolor))
         
     image = vertical_montage(im, spacing=0, valign='center')
     images.append(image)
@@ -385,7 +382,7 @@ if args.slideshow:
 
 if args.timestamp:
     now = localtz.localize(datetime.now())
-    now_image = text_as_image(now.strftime(args.timestamp_format), font=timestamp_font, fill=fontcolor)
+    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=fontcolor)
 
 if args.vertical:
     montage = vertical_montage(images, spacing=max(args.vpadding,0), halign='center', valign='center')
