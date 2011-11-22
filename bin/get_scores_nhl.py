@@ -136,12 +136,25 @@ def find_team_info(game_header, boxid, homeaway):
 #-------------------------------------------------------------------------------
 
 def get_font(name, args, default_font):
+
     try:
         font = ImageFont.truetype(args[name + '.font'], int(args[name + '.fontsize']))
     except:
         font = default_font
 
     return font
+
+def get_color(name, args, default_color):
+
+    property = name + '.color'
+
+    if property in args:
+        color = args[property]
+    else:
+        color = default_color
+
+    return color
+
 
 #-------------------------------------------------------------------------------
 
@@ -200,7 +213,7 @@ vargs = vars(args)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 if args.libdir:
     sys.path.insert(0, args.libdir)
-from imageutils import horizontal_montage, vertical_montage, text_as_image
+from imageutils import horizontal_montage, vertical_montage, text_as_image, drop_shadow
 
 localtz = timezone(args.timezone)
 
@@ -279,25 +292,18 @@ for g in soup.contents:
     games.append(game)
 
 fonts = {}
-
 try:
     fonts['default'] = ImageFont.truetype(args.font, args.fontsize)
 except:
     print >>sys.stderr, "Unable to load font or no font specified"
     fonts['default'] = ImageFont.load_default()
 
-fonts['record'] = get_font('record', vargs, fonts['default'])
-fonts['headline'] = get_font('headline', vargs, fonts['default'])
-fonts['lastplay'] = get_font('lastplay', vargs, fonts['default'])
-fonts['tv'] = get_font('tv', vargs, fonts['default'])
-fonts['date'] = get_font('date', vargs, fonts['default'])
-fonts['timestamp'] = get_font('timestamp', vargs, fonts['default'])
-fonts['score'] = get_font('score', vargs, fonts['default'])
+colors = {}
+colors['default'] = args.fontcolor
 
-if args.fontcolor:
-    fontcolor = args.fontcolor
-else:
-    fontcolor = 'white'
+for s in ('record', 'headline', 'lastplay', 'tv', 'date', 'timestamp', 'score', 'status'):
+    fonts[s] = get_font(s, vargs, fonts['default'])
+    colors[s] = get_color(s, vargs, colors['default'])
 
 images = []
 for i, game in enumerate(games):
@@ -324,23 +330,23 @@ for i, game in enumerate(games):
 
     if game.type == 'final':
         # Display the current/final score
-        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=fontcolor)
-        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=fontcolor)
+        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=colors['score'])
+        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=colors['score'])
         score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
 
-        im.append(text_as_image(game.status[0], font=fonts['default'], fill=fontcolor))
+        im.append(text_as_image(game.status[0].upper(), font=fonts['status'], fill=colors['status']))
          
 
     # Display some game info
     elif game.type == 'in-progress':
         # Display the current score and game status
-        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=fontcolor)
-        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=fontcolor)
-        score_i = horizontal_montage([away_is, home_is], min_width=iw/2, valign='center', halign='center')
+        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=colors['score'])
+        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=colors['score'])
+        score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
 
-        im.append(text_as_image("%s %s" % (game.status[1], game.status[2]), font=fonts['default'], fill=fontcolor))
+        im.append(text_as_image("%s %s" % (game.status[2].upper(), game.status[1].upper().replace(',','')), font=fonts['status'], fill=colors['status']))
         #if game.lastplay:
         #    im.append(text_as_image(game.lastplay, font=fonts['lastplay'], fill=fontcolor))
 
@@ -349,20 +355,20 @@ for i, game in enumerate(games):
 
         date_str = game.time.strftime(args.date_format)
 
-        timecolor = fontcolor
+        timecolor = colors['date']
 
         how_long = game.time - localtz.localize(datetime.now())
         if how_long.total_seconds() < 900:
-            timecolor = red
+            timecolor = 'red'
         elif how_long.total_seconds() < 3600:
             timecolor = 'yellow'
 
-        im.append(text_as_image(date_str, font=fonts['date'], fill=timecolor))
+        im.append(text_as_image(date_str, font=fonts['date'], fill=colors['date']))
 
         if game.tv:
-            im.append(text_as_image(game.tv, font=fonts['tv'], fill=fontcolor))
+            im.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
         
-    image = vertical_montage(im, spacing=0, valign='center')
+    image = drop_shadow(vertical_montage(im, spacing=0, valign='center'))
     images.append(image)
 
 if args.slideshow:
@@ -382,7 +388,7 @@ if args.slideshow:
 
 if args.timestamp:
     now = localtz.localize(datetime.now())
-    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=fontcolor)
+    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=colors['timestamp'])
 
 if args.vertical:
     montage = vertical_montage(images, spacing=max(args.vpadding,0), halign='center', valign='center')

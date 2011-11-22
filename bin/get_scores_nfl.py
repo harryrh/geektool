@@ -3,7 +3,7 @@
 
 from BeautifulSoup import BeautifulSoup
 from ConfigParser import SafeConfigParser
-from PIL import Image, ImageFont
+from PIL import Image, ImageFont, ImageFilter
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from datetime import date, time, datetime
 from pytz import timezone
@@ -34,7 +34,7 @@ def normalize(string):
 
 class Team():
     
-    def __init__(self, name, scores=None, record=None, game_record=None, winner=None, possession=None, image=None):
+    def __init__(self, name, scores=None, record=None, game_record=None, winner=False, possession=None, image=None):
 
         self.name = name
         self.scores = scores
@@ -100,9 +100,20 @@ def get_font(name, args, default_font):
 
     return font
 
+def get_color(name, args, default_color):
+
+    property = name + '.color'
+
+    if property in args:
+        color = args[property]
+    else:
+        color = default_color
+
+    return color
+
 #-------------------------------------------------------------------------------
 
-def render_game(game, fonts, fontcolor):
+def render_game(game, fonts, colors):
 
     game_images = []
 
@@ -114,8 +125,8 @@ def render_game(game, fonts, fontcolor):
     if upcoming:
         ar = game.away_team.record
         hr = game.home_team.record
-        ari = text_as_image(ar, font=fonts['record'], fill=fontcolor)
-        hri = text_as_image(hr, font=fonts['record'], fill=fontcolor)
+        ari = text_as_image(ar, font=fonts['record'], fill=colors['record'])
+        hri = text_as_image(hr, font=fonts['record'], fill=colors['record'])
         away_image = vertical_montage([game.away_team.image, ari], halign='center')
         home_image = vertical_montage([game.home_team.image, hri], halign='center')
 
@@ -124,17 +135,17 @@ def render_game(game, fonts, fontcolor):
 
     if upcoming:
         delta = game.date - localtz.localize(datetime.now())
-        game_images.append(text_as_image(game.date.strftime(args.date_format), font=fonts['date'], fill=fontcolor))
+        game_images.append(text_as_image(game.date.strftime(args.date_format), font=fonts['date'], fill=colors['date']))
         if delta.days >= 7:
-            game_images.append(text_as_image(game.date.strftime('%b %m, %Y'), font=fonts['date'], fill=fontcolor))
-        game_images.append(text_as_image(game.tv, font=fonts['tv'], fill=fontcolor))
+            game_images.append(text_as_image(game.date.strftime('%b %m, %Y'), font=fonts['date'], fill=colors['date']))
+        game_images.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
     else:
         if args.quarters:
             # Quarters as text
             (w, h) = icons.size
 
-            asi = [text_as_image(s, font=fonts['quarter'], fill=fontcolor) for s in game.away_team.scores]
-            hsi = [text_as_image(s, font=fonts['quarter'], fill=fontcolor) for s in game.home_team.scores]
+            asi = [text_as_image(s, font=fonts['quarter'], fill=colors['quarter']) for s in game.away_team.scores]
+            hsi = [text_as_image(s, font=fonts['quarter'], fill=colors['quarter']) for s in game.home_team.scores]
 
             qis = []
             for x in zip(asi, hsi):
@@ -145,37 +156,37 @@ def render_game(game, fonts, fontcolor):
             game_images.append(quarters_image)
         else:
             # Summary score
-            #game_images.append(text_as_image("%s - %s" % (game.away_team.scores[5], game.home_team.scores[5]),
-            #    font=fonts['default'], fill=fontcolor))
             (iw, ih) = icons.size
-            away_i = text_as_image("%s" % game.away_team.scores[5], font=fonts['score'], fill=fontcolor)
-            home_i = text_as_image("%s" % game.home_team.scores[5], font=fonts['score'], fill=fontcolor)
+
+            away_i = text_as_image("%s" % game.away_team.scores[5], font=fonts['score'], fill=colors['score'])
+            home_i = text_as_image("%s" % game.home_team.scores[5], font=fonts['score'], fill=colors['score'])
+
             game_images.append(horizontal_montage([away_i, home_i], min_width=iw/2, halign='center', valign='center'))
 
-        game_images.append(text_as_image(game.status, font=fonts['default'], fill=fontcolor))
+        game_images.append(text_as_image(game.status.upper(), font=fonts['status'], fill=colors['status']))
 
         if args.headline and game.headline:
             hi = []
-            for str in wrap(game.headline, 50):
-                hi.append(text_as_image(str, font=fonts['headline'], fill=fontcolor))
+            for str in wrap(game.headline, 20):
+                hi.append(text_as_image(str, font=fonts['headline'], fill=colors['headline']))
             game_images.append(vertical_montage(hi, halign='left'))
 
         if args.lastplay and game.lastplay:
             li = []
-            for str in wrap(game.lastplay, 50):
-                li.append(text_as_image(str, font=fonts['lastplay'], fill=fontcolor))
+            for str in wrap(game.lastplay, 20):
+                li.append(text_as_image(str, font=fonts['lastplay'], fill=colors['lastplay']))
             game_images.append(vertical_montage(li, halign='left'))
 
         if game.type == 'in-game':
-            game_images.append(text_as_image(game.tv, font=fonts['tv'], fill='yellow'))
+            game_images.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
 
+    return drop_shadow(vertical_montage(game_images, halign='center', spacing=0))
 
-    return vertical_montage(game_images, halign='center', spacing=0)
 
 def render_games(games, fonts, fontcolor):
     game_images = []
     for game in games:
-        game_images.append(render_game(game, fonts, fontcolor))
+        game_images.append(render_game(game, fonts, colors))
     return game_images
 
 #-------------------------------------------------------------------------------
@@ -193,7 +204,7 @@ parser = ArgumentParser(parents=[conf_parser],
 
 parser.add_argument('--font', dest='font', help='TrueType Font to Load')
 parser.add_argument('--fontsize', dest='fontsize', type=int, help='Font Size')
-parser.add_argument('--fontcolor', dest='fontcolor', help='Font Color (PIL)')
+parser.add_argument('--fontcolor', dest='fontcolor', default='white', help='Font Color (PIL)')
 parser.add_argument('-d', '--date', dest='date', metavar='YYYYMMDD', help='Specific date')
 parser.add_argument('--spacing', dest='spacing', type=int, help='Spacing between Logos')
 parser.add_argument('--hpad', dest='hpadding', type=int, help='Horizontal Montage Spacing')
@@ -237,7 +248,7 @@ except:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 if args.libdir:
     sys.path.insert(0, args.libdir)
-from imageutils import horizontal_montage, vertical_montage, text_as_image
+from imageutils import horizontal_montage, vertical_montage, text_as_image, drop_shadow
 
 # 'http://scores.espn.go.com/nfl/scoreboard'
 
@@ -314,6 +325,7 @@ for date_block in dates:
 
             headline = None
             lastplay = None
+            tv = None
 
             if type == 'preview':
                 upcoming = upcoming_re.match(status)
@@ -366,21 +378,14 @@ try:
 except:
     fonts['default'] = ImageFont.load_default()
 
-fonts['record'] = get_font('record', vargs, fonts['default'])
-fonts['headline'] = get_font('headline', vargs, fonts['default'])
-fonts['date'] = get_font('date', vargs, fonts['default'])
-fonts['quarter'] = get_font('quarter', vargs, fonts['default'])
-fonts['tv'] = get_font('tv', vargs, fonts['default'])
-fonts['timestamp'] = get_font('timestamp', vargs, fonts['default'])
-fonts['week'] = get_font('week', vargs, fonts['default'])
-fonts['lastplay'] = get_font('lastplay', vargs, fonts['default'])
-fonts['score'] = get_font('score', vargs, fonts['default'])
+colors = {}
+colors['default'] = args.fontcolor
 
-fontcolor = 'white'
-if args.fontcolor:
-    fontcolor=args.fontcolor
+for s in ('record', 'headline', 'date', 'quarter', 'tv', 'timestamp', 'week', 'lastplay', 'score', 'status'):
+    fonts[s] = get_font(s, vargs, fonts['default'])
+    colors[s] = get_color(s, vargs, colors['default'])
 
-images = render_games(games, fonts, fontcolor)
+images = render_games(games, fonts, colors)
 
 if args.slideshow:
     if not os.path.exists(args.slideshow):
@@ -397,14 +402,14 @@ if args.slideshow:
             image = image.convert('LA')
         image.save(filename)
 
-week_im = text_as_image("WEEK %s" % week, font=fonts['week'], fill=fontcolor)
+week_im = text_as_image("WEEK %s" % week, font=fonts['week'], fill=colors['week'])
 
 if args.timestamp:
     now = localtz.localize(datetime.now())
-    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=fontcolor)
+    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=colors['timestamp'])
 
 if not images:
-    images = [text_as_image('No Games', font=fonts['default'], fill=fontcolor)]
+    images = [text_as_image('No Games', font=fonts['default'], fill=colors['default'])]
 
 if args.vertical:
     montage = vertical_montage(images, spacing=max(int(args.vpad),0), halign='center')
