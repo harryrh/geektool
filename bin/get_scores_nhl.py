@@ -192,7 +192,7 @@ parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%
         help='Format for timestamp (strftime)')
 parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local timezone')
 
-parser.add_argument('--date-format', dest='date_format', default='%l:%M %p %Z',
+parser.add_argument('--date-format', dest='date_format', default='%l:%M %p',
         help='Format for date for game time (strftime)')
 parser.add_argument('--record-format', dest='record_format', default='{w}-{l}-{s} ({p})', help='Team Record format')
 parser.add_argument('-y', '--yesterday', dest='yesterday', action='store_true', default=False,
@@ -301,7 +301,7 @@ except:
 colors = {}
 colors['default'] = args.fontcolor
 
-for s in ('record', 'headline', 'lastplay', 'tv', 'date', 'timestamp', 'score', 'status'):
+for s in ('record', 'headline', 'lastplay', 'tv', 'date', 'timestamp', 'score', 'status', 'gametime', 'countdown'):
     fonts[s] = get_font(s, vargs, fonts['default'])
     colors[s] = get_color(s, vargs, colors['default'])
 
@@ -316,10 +316,10 @@ for i, game in enumerate(games):
     # Display the teams record if it is pre-game
     if game.type == 'pregame':
 
-        ari = text_as_image(format_record(game.away_team.record, args.record_format), font=fonts['record'], fill=fontcolor)
+        ari = text_as_image(format_record(game.away_team.record, args.record_format), font=fonts['record'], fill=colors['record'])
         away_image = vertical_montage([away_image, ari], halign='center')
 
-        hri = text_as_image(format_record(game.home_team.record, args.record_format), font=fonts['record'], fill=fontcolor)
+        hri = text_as_image(format_record(game.home_team.record, args.record_format), font=fonts['record'], fill=colors['record'])
         home_image = vertical_montage([home_image, hri], halign='center')
 
     # Team Icons
@@ -355,20 +355,23 @@ for i, game in enumerate(games):
 
         date_str = game.time.strftime(args.date_format)
 
-        timecolor = colors['date']
+        countdown = game.time - localtz.localize(datetime.now())
+        datecolor = colors['gametime']
+        if countdown.total_seconds() < 900:
+            datecolor = colors['countdown']
 
-        how_long = game.time - localtz.localize(datetime.now())
-        if how_long.total_seconds() < 900:
-            timecolor = 'red'
-        elif how_long.total_seconds() < 3600:
-            timecolor = 'yellow'
+        im.append(text_as_image(date_str, font=fonts['gametime'], fill=datecolor))
 
-        im.append(text_as_image(date_str, font=fonts['date'], fill=colors['date']))
+#       countdown = game.time - localtz.localize(datetime.now())
+#       if countdown.total_seconds() < 3600:
+#           minutes = countdown.total_seconds() / 60
+#           seconds = countdown.total_seconds() - (minutes * 60)
+#           im.append(text_as_image('%02d:%02d' % (minutes, seconds), font=fonts['countdown'], fill=colors['countdown']))
 
         if game.tv:
             im.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
         
-    image = drop_shadow(vertical_montage(im, spacing=0, valign='center'))
+    image = drop_shadow(vertical_montage(im, spacing=0, halign='center'))
     images.append(image)
 
 if args.slideshow:

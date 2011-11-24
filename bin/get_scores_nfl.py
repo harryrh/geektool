@@ -123,8 +123,8 @@ def render_game(game, fonts, colors):
     upcoming = game.type.startswith('preview')
 
     if upcoming:
-        ar = game.away_team.record
-        hr = game.home_team.record
+        ar = game.away_team.record.replace('-', ' - ')
+        hr = game.home_team.record.replace('-', ' - ')
         ari = text_as_image(ar, font=fonts['record'], fill=colors['record'])
         hri = text_as_image(hr, font=fonts['record'], fill=colors['record'])
         away_image = vertical_montage([game.away_team.image, ari], halign='center')
@@ -135,7 +135,7 @@ def render_game(game, fonts, colors):
 
     if upcoming:
         delta = game.date - localtz.localize(datetime.now())
-        game_images.append(text_as_image(game.date.strftime(args.date_format), font=fonts['date'], fill=colors['date']))
+        game_images.append(text_as_image(game.date.strftime(args.date_format).upper(), font=fonts['date'], fill=colors['date']))
         if delta.days >= 7:
             game_images.append(text_as_image(game.date.strftime('%b %m, %Y'), font=fonts['date'], fill=colors['date']))
         game_images.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
@@ -223,7 +223,7 @@ parser.add_argument('--timestamp', dest='timestamp', action='store_true', defaul
 parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
         help='Format for timestamp (strftime)')
 parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local Time Zone')
-parser.add_argument('--date-format', dest='date_format', default='%a %l:%M %p %Z', metavar='FORMAT', help='Date format')
+parser.add_argument('--date-format', dest='date_format', default='%a %l:%M %p', metavar='FORMAT', help='Date format')
 parser.add_argument('-T', '--type', dest='types', action='append', help='Filter to game types', choices=['in-game', 'preview', 'final-state'])
 
 group = parser.add_mutually_exclusive_group()
