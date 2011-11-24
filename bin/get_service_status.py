@@ -42,7 +42,7 @@ vargs = vars(args)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 if args.libdir:
     sys.path.insert(0, args.libdir)
-from imageutils import horizontal_montage, vertical_montage
+from imageutils import horizontal_montage, vertical_montage, drop_shadow
 
 services = shlex.split(args.services)
 
@@ -77,10 +77,10 @@ for service in services:
         images.append(down_image)
 
 if args.horizontal:
-    hm = horizontal_montage(images, valign='top')
+    hm = drop_shadow(horizontal_montage(images, valign='top'))
     hm.save(args.horizontal)
 
 if args.vertical:
-    vm = vertical_montage(images, valign='center')
+    vm = drop_shadow(vertical_montage(images, valign='center'))
     vm.save(args.vertical)
 
