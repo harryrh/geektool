@@ -397,10 +397,17 @@ if args.vertical:
     montage = vertical_montage(images, spacing=max(args.vpadding,0), halign='center', valign='center')
     if args.timestamp:
         montage = vertical_montage([montage, now_image], halign='center', valign='bottom')
+    dir = os.path.dirname(args.vertical)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
     montage.save(args.vertical)
 
 if args.horizontal:
     montage = horizontal_montage(images, spacing=max(args.hpadding,0), halign='center', valign='top')
     if args.timestamp:
         montage = horizontal_montage([now_image.rotate(90), montage], spacing=1, valign='center')
+    dir = os.path.dirname(args.horizontal)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
     montage.save(args.horizontal)
