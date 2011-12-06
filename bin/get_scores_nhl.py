@@ -49,7 +49,13 @@ class Team():
 
 class Game():
 
-    def __init__(self, type, away_team, home_team, status=None, remaining=None, headline=None, time=None, tv=None, lastplay=None):
+    def __init__(self, type, away_team, home_team, 
+            status=None,
+            remaining=None,
+            headline=None,
+            time=None,
+            tv=None, 
+            lastplay=None):
 
         self.type = type
         self.away_team = away_team
@@ -273,7 +279,8 @@ for g in soup.contents:
         ampm = upcoming.group(3)
         if ampm == 'PM' and int(hour) < 12:
             hour = hour + 12
-        game_time = datetime.combine(date.today(), time(hour, minute, tzinfo=eastern)).astimezone(localtz)
+        game_time = datetime.combine(date.today(), 
+                time(hour, minute, tzinfo=eastern)).astimezone(localtz)
 
     elif type == 'final':
         status_block = game_info.find('li', id='%s-statusLine1' % boxid)
@@ -287,18 +294,19 @@ for g in soup.contents:
     headline = find_headline(g)
     lastplay = find_lastplay(g)
 
-    game = Game(type, away_team, home_team, remaining=remaining, time=game_time, 
-            headline=headline, status=status, tv=tv, lastplay=lastplay)
+    game = Game(type, away_team, home_team,
+            remaining=remaining, time=game_time, headline=headline,
+            status=status, tv=tv, lastplay=lastplay)
     games.append(game)
 
+
 fonts = {}
+colors = {}
 try:
     fonts['default'] = ImageFont.truetype(args.font, args.fontsize)
 except:
-    print >>sys.stderr, "Unable to load font or no font specified"
     fonts['default'] = ImageFont.load_default()
 
-colors = {}
 colors['default'] = args.fontcolor
 
 for s in ('record', 'headline', 'lastplay', 'tv', 'date', 'timestamp', 'score', 'status', 'gametime', 'countdown'):
@@ -330,29 +338,35 @@ for i, game in enumerate(games):
 
     if game.type == 'final':
         # Display the current/final score
-        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=colors['score'])
-        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=colors['score'])
-        score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
+        away_si = text_as_image("%s" % game.away_team.score, 
+                font=fonts['score'], fill=colors['score'])
+        home_si = text_as_image("%s" % game.home_team.score, 
+                font=fonts['score'], fill=colors['score'])
+        score_i = horizontal_montage([away_si, home_si], 
+                min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
-
-        im.append(text_as_image(game.status[0].upper(), font=fonts['status'], fill=colors['status']))
-         
+        im.append(text_as_image(game.status[0].upper(),
+            font=fonts['status'], fill=colors['status']))
 
     # Display some game info
     elif game.type == 'in-progress':
         # Display the current score and game status
-        away_si = text_as_image("%s" % game.away_team.score, font=fonts['score'], fill=colors['score'])
-        home_si = text_as_image("%s" % game.home_team.score, font=fonts['score'], fill=colors['score'])
-        score_i = horizontal_montage([away_si, home_si], min_width=iw/2, valign='center', halign='center')
+        away_si = text_as_image("%s" % game.away_team.score,
+                font=fonts['score'], fill=colors['score'])
+        home_si = text_as_image("%s" % game.home_team.score,
+                font=fonts['score'], fill=colors['score'])
+        score_i = horizontal_montage([away_si, home_si],
+                min_width=iw/2, valign='center', halign='center')
         im.append(score_i)
 
-        im.append(text_as_image("%s %s" % (game.status[2].upper(), game.status[1].upper().replace(',','')), font=fonts['status'], fill=colors['status']))
+        im.append(text_as_image("%s %s" %
+            (game.status[2].upper(), game.status[1].upper().replace(',','')),
+            font=fonts['status'], fill=colors['status']))
         #if game.lastplay:
         #    im.append(text_as_image(game.lastplay, font=fonts['lastplay'], fill=fontcolor))
 
     elif game.type == 'pregame':
         # Display when the game will take place and the tv network
-
         date_str = game.time.strftime(args.date_format)
 
         countdown = game.time - localtz.localize(datetime.now())
@@ -360,7 +374,8 @@ for i, game in enumerate(games):
         if countdown.total_seconds() < 900:
             datecolor = colors['countdown']
 
-        im.append(text_as_image(date_str, font=fonts['gametime'], fill=datecolor))
+        im.append(text_as_image(date_str, 
+            font=fonts['gametime'], fill=datecolor))
 
 #       countdown = game.time - localtz.localize(datetime.now())
 #       if countdown.total_seconds() < 3600:
@@ -369,7 +384,8 @@ for i, game in enumerate(games):
 #           im.append(text_as_image('%02d:%02d' % (minutes, seconds), font=fonts['countdown'], fill=colors['countdown']))
 
         if game.tv:
-            im.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
+            im.append(text_as_image(game.tv,
+                font=fonts['tv'], fill=colors['tv']))
         
     image = drop_shadow(vertical_montage(im, spacing=0, halign='center'))
     images.append(image)
@@ -388,15 +404,18 @@ if args.slideshow:
         filename = os.path.join(args.slideshow, '%s%02d.png' % (args.prefix, i))
         image.save(filename)
 
-
 if args.timestamp:
     now = localtz.localize(datetime.now())
-    now_image = text_as_image(now.strftime(args.timestamp_format), font=fonts['timestamp'], fill=colors['timestamp'])
+    now_image = text_as_image(now.strftime(args.timestamp_format),
+            font=fonts['timestamp'], fill=colors['timestamp'])
 
 if args.vertical:
-    montage = vertical_montage(images, spacing=max(args.vpadding,0), halign='center', valign='center')
+    montage = vertical_montage(images, 
+            spacing=max(args.vpadding,0), halign='center', valign='center')
     if args.timestamp:
-        montage = vertical_montage([montage, now_image], halign='center', valign='bottom')
+        montage = vertical_montage([montage, now_image],
+                halign='center', valign='bottom')
+
     dir = os.path.dirname(args.vertical)
     if not os.path.exists(dir):
         os.makedirs(dir)
@@ -404,10 +423,14 @@ if args.vertical:
     montage.save(args.vertical)
 
 if args.horizontal:
-    montage = horizontal_montage(images, spacing=max(args.hpadding,0), halign='center', valign='top')
+    montage = horizontal_montage(images,
+            spacing=max(args.hpadding, 0), halign='center', valign='top')
     if args.timestamp:
-        montage = horizontal_montage([now_image.rotate(90), montage], spacing=1, valign='center')
+        montage = horizontal_montage([now_image.rotate(90), montage],
+                spacing=1, valign='center')
+
     dir = os.path.dirname(args.horizontal)
     if not os.path.exists(dir):
         os.makedirs(dir)
+
     montage.save(args.horizontal)
