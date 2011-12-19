@@ -178,31 +178,39 @@ parser = ArgumentParser(parents=[conf_parser],
 parser.add_argument('--font', dest='font', help='TrueType Font to Load')
 parser.add_argument('--fontsize', dest='fontsize', type=int, help='Font Size')
 parser.add_argument('--fontcolor', dest='fontcolor', help='Font Color (PIL)')
-parser.add_argument('-d', '--date', dest='date', metavar='YYYYMMDD', help='Specific date')
-parser.add_argument('--spacing', dest='spacing', type=int, help='Spacing between Logos')
-parser.add_argument('--hpad', dest='hpadding', type=int, help='Horizontal Montage Spacing')
-parser.add_argument('--vpad', dest='vpadding', type=int, help='Vertical Montage Spacing')
-parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE', help='Vertical Montage File Name')
-parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', help='Horizontal Montage File Name')
-parser.add_argument('-S', '--slideshow', dest='slideshow', metavar='DIR', help='Slideshow Directory')
+parser.add_argument('-d', '--date', dest='date', metavar='YYYYMMDD',
+        help='Specific date')
+parser.add_argument('--spacing', dest='spacing', type=int,
+        help='Spacing between Logos')
+parser.add_argument('--hpad', dest='hpadding', type=int,
+        help='Horizontal Montage Spacing')
+parser.add_argument('--vpad', dest='vpadding', type=int,
+        help='Vertical Montage Spacing')
+parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE',
+        help='Vertical Montage File Name')
+parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE',
+        help='Horizontal Montage File Name')
+parser.add_argument('-S', '--slideshow', dest='slideshow', metavar='DIR',
+        help='Slideshow Directory')
 parser.add_argument('-l', '--headline', dest='headline', action='store_true',
         help='Display headline')
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true',
         help='Display quarter scores')
-parser.add_argument('-g', '--desaturate', dest='desaturate', default=False, action='store_true',
-        help='Desaturate the image')
-parser.add_argument('--prefix', dest='prefix', default='nhl-game-', help='File Name Prefix')
-parser.add_argument('--timestamp', dest='timestamp', action='store_true', default=False,
-        help='Add a timestamp to the image')
-parser.add_argument('--timestamp-format', dest='timestamp_format', default='%m/%d %H:%M',
-        help='Format for timestamp (strftime)')
-parser.add_argument('--timezone', dest='timezone', default='US/Central', help='Local timezone')
-
+parser.add_argument('-g', '--desaturate', dest='desaturate', default=False,
+        action='store_true', help='Desaturate the image')
+parser.add_argument('--prefix', dest='prefix', default='nhl-game-',
+        help='File Name Prefix')
+parser.add_argument('--timestamp', dest='timestamp', action='store_true',
+        default=False, help='Add a timestamp to the image')
+parser.add_argument('--timestamp-format', dest='timestamp_format',
+        default='%m/%d %H:%M', help='Format for timestamp (strftime)')
+parser.add_argument('--timezone', dest='timezone', default='US/Central',
+        help='Local timezone')
 parser.add_argument('--date-format', dest='date_format', default='%l:%M %p',
         help='Format for date for game time (strftime)')
 parser.add_argument('--record-format', dest='record_format', default='{w}-{l}-{s} ({p})', help='Team Record format')
-parser.add_argument('-y', '--yesterday', dest='yesterday', action='store_true', default=False,
-        help='Get scores from yesterday')
+parser.add_argument('-y', '--yesterday', dest='yesterday', action='store_true',
+        default=False, help='Get scores from yesterday')
 
 parser.add_argument('-L', '--libdir', dest='libdir', metavar='DIR', 
         help='imageutils.py directory to search before "__file__/../lib"')
@@ -324,10 +332,14 @@ for i, game in enumerate(games):
     # Display the teams record if it is pre-game
     if game.type == 'pregame':
 
-        ari = text_as_image(format_record(game.away_team.record, args.record_format), font=fonts['record'], fill=colors['record'])
+        ari = text_as_image(
+                format_record(game.away_team.record, args.record_format),
+                font=fonts['record'], fill=colors['record'])
         away_image = vertical_montage([away_image, ari], halign='center')
 
-        hri = text_as_image(format_record(game.home_team.record, args.record_format), font=fonts['record'], fill=colors['record'])
+        hri = text_as_image(
+                format_record(game.home_team.record, args.record_format),
+                font=fonts['record'], fill=colors['record'])
         home_image = vertical_montage([home_image, hri], halign='center')
 
     # Team Icons
