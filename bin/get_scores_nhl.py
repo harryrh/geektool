@@ -25,7 +25,7 @@ def one_of(*args):
     return None
 
 def normalize(string):
-    return re.subn('[^a-z]', '', string.lower())[0]
+    return re.subn('[^a-z0-9]', '', string.lower())[0]
 
 class Team():
     
