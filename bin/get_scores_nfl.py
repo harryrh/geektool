@@ -256,7 +256,7 @@ base_url = 'http://scores.espn.go.com/nfl/scoreboard'
 html = urllib.urlopen(base_url).read()
 
 this_week = BeautifulSoup(html).find('option', selected = 'selected')
-(year, season, week) = [x.split('=')[1] for x in this_week['value'][1:].split('&')]
+(year, season, week) = [int(x.split('=')[1]) for x in this_week['value'][1:].split('&')]
 
 # 'http://scores.espn.go.com/nfl/scoreboard?seasonYear=2011&seasonType=2&weekNumber=8'
 # Get next week -- replace the html to be parsed
@@ -402,7 +402,14 @@ if args.slideshow:
             image = image.convert('LA')
         image.save(filename)
 
-week_im = text_as_image("WEEK %s" % week, font=fonts['week'], fill=colors['week'])
+
+if season == 1:
+    week_im = text_as_image("PRESEASON %d" % week, font=fonts['week'], fill=colors['week'])
+elif season == 2:
+    week_im = text_as_image("WEEK %d" % week, font=fonts['week'], fill=colors['week'])
+elif season == 3:
+    ptype = ['WILD CARD', 'DIVISIONAL', 'CONFERENCE', 'PRO BOWL', 'SUPER BOWL']
+    week_im = text_as_image("%s" % ptype[week-1], font=fonts['week'], fill=colors['week'])
 
 if args.timestamp:
     now = localtz.localize(datetime.now())
