@@ -1,6 +1,8 @@
 #!/opt/local/bin/python2.7
 '''Generate pie charts for disk usage'''
 
+import matplotlib
+matplotlib.use('Agg')
 import pylab as pl 
 from subprocess import Popen, PIPE
 from ConfigParser import SafeConfigParser
