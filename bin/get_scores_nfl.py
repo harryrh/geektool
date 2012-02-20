@@ -62,7 +62,7 @@ class Team():
 class Game():
 
     def __init__(self, away_team, home_team, type,
-            status=None, tv=None, headline=None, date=None, lastplay=None):
+            status=None, tv=None, headline=None, date=None, lastplay=None, line=None):
 
         self.away_team = away_team
         self.home_team = home_team
@@ -72,6 +72,7 @@ class Game():
         self.headline = headline
         self.date = date
         self.lastplay = lastplay
+        self.line = line
 
     def __str__(self):
 
@@ -85,6 +86,7 @@ class Game():
         info.append('tv=%s' % self.tv)
         info.append('headline=%s' % self.headline)
         info.append('lastplay=%s' % self.lastplay)
+        info.append('line=%s' % self.line)
         info.append('>')
 
         return " ".join(info)
@@ -122,7 +124,7 @@ def render_game(game, fonts, colors):
 
     upcoming = game.type.startswith('preview')
 
-    if upcoming:
+    if upcoming and game.away_team.record != 'N/A':
         ar = game.away_team.record.replace('-', ' - ')
         hr = game.home_team.record.replace('-', ' - ')
         ari = text_as_image(ar, font=fonts['record'], fill=colors['record'])
@@ -138,7 +140,13 @@ def render_game(game, fonts, colors):
         game_images.append(text_as_image(game.date.strftime(args.date_format).upper(), font=fonts['date'], fill=colors['date']))
         if delta.days >= 7:
             game_images.append(text_as_image(game.date.strftime('%b %m, %Y'), font=fonts['date'], fill=colors['date']))
+
+        if args.line and game.line:
+            line_image = text_as_image(game.line, font=fonts['line'], fill=colors['line'])
+            game_images.append(line_image)
+
         game_images.append(text_as_image(game.tv, font=fonts['tv'], fill=colors['tv']))
+
     else:
         if args.quarters:
             # Quarters as text
@@ -213,6 +221,7 @@ parser.add_argument('-V', '--vertical', dest='vertical', metavar='FILE', help='V
 parser.add_argument('-H', '--horizontal', dest='horizontal', metavar='FILE', help='Horizontal Montage File Name')
 parser.add_argument('-S', '--slideshow', dest='slideshow', help='Slideshow Directory')
 parser.add_argument('-l', '--headline', dest='headline', action='store_true', help='Display headline')
+parser.add_argument('--line', dest='line', action='store_true', help='Display line')
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true', help='Display quarter scores')
 parser.add_argument('--lastplay', dest='lastplay', action='store_true', help='Display last play summary')
 parser.add_argument('-g', '--desaturate', dest='desaturate',
@@ -257,6 +266,7 @@ html = urllib.urlopen(base_url).read()
 
 this_week = BeautifulSoup(html).find('option', selected = 'selected')
 (year, season, week) = [int(x.split('=')[1]) for x in this_week['value'][1:].split('&')]
+print 'SEASON: %s, WEEK: %s' % (season, week)
 
 # 'http://scores.espn.go.com/nfl/scoreboard?seasonYear=2011&seasonType=2&weekNumber=8'
 # Get next week -- replace the html to be parsed
@@ -285,7 +295,10 @@ date_re = re.compile('(\w+),\s+(\w+)\s+(\d+),\s+(\d+)')
 def parse_team_block(block, blockid, ahprefix):
 
     name_b = block.find('p', 'team-name')
-    name = name_b.a.text
+    try:
+        name = name_b.a.text
+    except AttributeError:
+        name = name_b.text
 
     winner_b = block.find('div', id='%s-%sWinner' % (blockid, ahprefix))
     winner = winner_b['style'].endswith('display:block')
@@ -298,7 +311,11 @@ def parse_team_block(block, blockid, ahprefix):
 
     record_b = block.find('p', 'record')
     record_s = record_b.text
-    (record, game_record) = record_s[1:-1].split(', ')
+    try:
+        (record, game_record) = record_s[1:-1].split(', ')
+    except ValueError:
+        (record, game_record) = ('N/A', 'N/A')
+
 
     return Team(name, winner=winner, possession=possession, scores=scores, record=record, game_record=game_record)
 
@@ -326,6 +343,7 @@ for date_block in dates:
             headline = None
             lastplay = None
             tv = None
+            line = None
 
             if type == 'preview':
                 upcoming = upcoming_re.match(status)
@@ -341,6 +359,13 @@ for date_block in dates:
 
                 tv_block = game_block.find('div', id='%s-preTV' % blockid)
                 tv = tv_block.p.text.replace('&nbsp;', '').strip()
+
+                line_block = game_block.find('li', 'vegas-line')
+                dailyline = line_block.find('a', href='dailylines')
+                try:
+                    line = "%s%s" % (dailyline.contents[1].text, dailyline.contents[2])
+                except IndexError:
+                    line = ''
 
             elif type == 'in-game':
 
@@ -368,7 +393,9 @@ for date_block in dates:
             home_team = parse_team_block(home_block, blockid, 'h')
             home_team.image = get_image(home_team, vargs)
 
-            game = Game(away_team, home_team, type=type, status=status, tv=tv, headline=headline, date=game_date, lastplay=lastplay)
+            print 'TYPE: ', type
+
+            game = Game(away_team, home_team, type=type, status=status, tv=tv, headline=headline, date=game_date, lastplay=lastplay, line=line)
 
             games.append(game)
 
@@ -381,7 +408,7 @@ except:
 colors = {}
 colors['default'] = args.fontcolor
 
-for s in ('record', 'headline', 'date', 'quarter', 'tv', 'timestamp', 'week', 'lastplay', 'score', 'status'):
+for s in ('record', 'headline', 'date', 'quarter', 'tv', 'timestamp', 'week', 'lastplay', 'score', 'status', 'line'):
     fonts[s] = get_font(s, vargs, fonts['default'])
     colors[s] = get_color(s, vargs, colors['default'])
 
