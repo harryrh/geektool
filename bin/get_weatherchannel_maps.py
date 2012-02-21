@@ -78,6 +78,10 @@ urls = shlex.split(args.urls)
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
+else:
+    # Clean the directory
+    for file in os.listdir(args.output_dir):
+        os.remove(os.path.join(args.output_dir, file))
 
 for url in urls:
     t = threading.Thread(target=get_image, args=(url, args.image_name, args.output_dir))
