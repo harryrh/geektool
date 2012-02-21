@@ -21,6 +21,7 @@ import os
 import shlex
 from BeautifulSoup import BeautifulSoup
 import threading
+import Queue
 
 MAX_JOBS=10
 
@@ -28,6 +29,15 @@ MAX_JOBS=10
 # Get a Weather Channel URL, find an image reference with a specific
 # name attribute then retrieve that image to the output directory
 #
+def image_worker(q, name, output_dir):
+    th = threading.current_thread()
+    while True:
+        try:
+            url = q.get(False)
+            get_image(url, name, output_dir)
+        except Queue.Empty:
+            return
+
 def get_image(url, name, output_dir):
     try:
         html = urllib.urlopen(url).read()
@@ -71,6 +81,7 @@ parser.add_argument('-o', '--output-dir', dest='output_dir',
         default='/usr/local/geektool/tmp/wc-maps', help='Directory to store map images')
 parser.add_argument('-n', '--image-name', dest='image_name',
         default='mapImg', help='<img name="name"> attribute to search for')
+parser.add_argument('-j', '--max-jobs', dest='max_jobs', default=10, type=int, help="Max Threads")
 args = parser.parse_args()
 vargs = vars(args)
 
@@ -83,6 +94,11 @@ else:
     for file in os.listdir(args.output_dir):
         os.remove(os.path.join(args.output_dir, file))
 
+url_queue = Queue.Queue()
 for url in urls:
-    t = threading.Thread(target=get_image, args=(url, args.image_name, args.output_dir))
+    url_queue.put(url)
+
+# FIXME -- this is probably too many threads to create at once
+for i in xrange(args.max_jobs):
+    t = threading.Thread(target=image_worker, args=(url_queue, args.image_name, args.output_dir))
     t.start()
