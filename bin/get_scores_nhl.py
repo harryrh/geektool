@@ -55,7 +55,8 @@ class Game():
             headline=None,
             time=None,
             tv=None, 
-            lastplay=None):
+            lastplay=None,
+            note=None):
 
         self.type = type
         self.away_team = away_team
@@ -66,6 +67,7 @@ class Game():
         self.time = time
         self.tv = tv
         self.lastplay = lastplay
+        self.note = note
 
     def __str__(self):
 
@@ -80,6 +82,7 @@ class Game():
         info.append('headline="%s"' % self.headline)
         info.append('tv="%s"' % self.tv)
         info.append('lastplay="%s"' % self.lastplay)
+        info.append('note="%s"' % self.note)
         info.append('>')
 
         return " ".join(info)
@@ -106,8 +109,17 @@ def find_headline(game_block):
 
     return headline
 
+def find_note(game_block):
+    note_block = game_block.find('p', id = re.compile('-gameNote'))
+    if note_block:
+        note = note_block.string
+    else:
+        note = None
+
+    return note
+
 def find_lastplay(game_block):
-    lastplay_block = g.find('span', id = re.compile('-lastPlayText$'))
+    lastplay_block = game_block.find('span', id = re.compile('-lastPlayText$'))
 
     if lastplay_block:
         lastplay = lastplay_block.string.replace('&nbsp;', '')
@@ -196,6 +208,8 @@ parser.add_argument('-l', '--headline', dest='headline', action='store_true',
         help='Display headline')
 parser.add_argument('-q', '--quarters', dest='quarters', action='store_true',
         help='Display quarter scores')
+parser.add_argument('-n', '--note', dest='note', action='store_true',
+        help='Display notes')
 parser.add_argument('-g', '--desaturate', dest='desaturate', default=False,
         action='store_true', help='Desaturate the image')
 parser.add_argument('--prefix', dest='prefix', default='nhl-game-',
@@ -301,10 +315,11 @@ for g in soup.contents:
     remaining = find_time_remaining(g)
     headline = find_headline(g)
     lastplay = find_lastplay(g)
+    note = find_note(g)
 
     game = Game(type, away_team, home_team,
             remaining=remaining, time=game_time, headline=headline,
-            status=status, tv=tv, lastplay=lastplay)
+            status=status, tv=tv, lastplay=lastplay, note=note)
     games.append(game)
 
 
@@ -398,7 +413,7 @@ for i, game in enumerate(games):
         if game.tv:
             im.append(text_as_image(game.tv,
                 font=fonts['tv'], fill=colors['tv']))
-        
+
     image = drop_shadow(vertical_montage(im, spacing=0, halign='center'))
     images.append(image)
 

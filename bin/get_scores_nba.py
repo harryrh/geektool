@@ -228,7 +228,6 @@ args = parser.parse_args()
 vargs = vars(args)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
-print args
 if args.libdir:
     sys.path.insert(0, args.libdir)
 from imageutils import horizontal_montage, vertical_montage, text_as_image, drop_shadow
