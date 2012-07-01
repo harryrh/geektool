@@ -1,7 +1,7 @@
 #
 # Some simple image related utilities
 #
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 # Align one box inside another bounding box
 # Returns the (x,y) offset of the size inside the bounds
@@ -110,7 +110,7 @@ def vertical_montage(images,
 
     return montage
 
-def text_as_image(text, font=None, fill=None, mode='RGBA'):
+def text_as_image(text, font=ImageFont.load_default(), fill=None, mode='RGBA'):
     size = font.getsize(text)
 
     image = Image.new(mode, size)
@@ -149,4 +149,27 @@ def drop_shadow(image, color='black', offset=(2,3), blur=2):
     final.paste(new_image, (image_x, image_y), alpha)
 
     return final
+
+def circlegauge(width, height, value, 
+        value_min=0.0, value_max=1.0, 
+        background=None, foreground='white',
+        stroke=1,
+        startangle=0,
+        text=None, font=ImageFont.load_default(), fontcolor='white'):
+
+    percent = (float(value) - value_min) / (value_max - value_min)
+    degrees = int(percent * 360)
+
+    im = Image.new('RGBA', (width, height), 0)
+    draw = ImageDraw.Draw(im)
+    if background:
+        draw.ellipse((0,0,width,height), fill=background)
+    draw.pieslice((0,0,width,height), startangle, startangle+degrees, fill=foreground)
+    draw.ellipse((stroke,stroke,width-stroke,height-stroke), fill=0)
+
+    if text:
+        (fw,fh) = font.getsize(text)
+        draw.text((width/2-fw/2,height/2-fh/2), text, font=font, fill=fontcolor)
+
+    return im
 
