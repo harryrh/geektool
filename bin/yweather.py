@@ -1,8 +1,10 @@
 #!/opt/local/bin/python2.7
 # -*- Encoding: utf-8 -*-
 
-# Get and print Yahoo! Weather information
-# See http://developer.yahoo.com/weather/ for information
+'''
+Get and print Yahoo! Weather information
+See http://developer.yahoo.com/weather/ for information
+'''
 
 from xml.dom.minidom import parse
 import urllib
@@ -93,7 +95,7 @@ code = (
 conf_parser = ArgumentParser(add_help=False)
 conf_parser.add_argument('-f', '--config-file', dest='config_file', metavar='FILE',
         help='Config file to load')
-conf_parser.add_argument('-s', '--section',  dest='section', default='sabnzbd',
+conf_parser.add_argument('-s', '--section',  dest='section', default='weather',
         help='Section of Config File to use')
 args, remaining_argv = conf_parser.parse_known_args()
 
@@ -101,16 +103,16 @@ parser = ArgumentParser(parents=[conf_parser],
         description=__doc__,
         formatter_class=ArgumentDefaultsHelpFormatter)
 
+parser.add_argument("-w", "--woeid", dest="woeid", default="12792014", help="WOEID")
+parser.add_argument("-u", "--units", dest="units", default="f", choices=['f', 'c'], help="Degree Units")
+parser.add_argument("-t", "--template", dest="template", help="Output Format template", action='append')
+
 if args.config_file:
     config = SafeConfigParser()
     config.read(args.config_file)
     defaults = dict(config.items(args.section))
     parser.set_defaults(**defaults)
 
-parser.add_argument("-w", "--woeid", dest="woeid", default="12792014", help="WOEID")
-parser.add_argument("-u", "--units", dest="units", default="f", choices=['f', 'c'], help="Degree Units")
-parser.add_argument("-t", "--template", dest="template", help="Output Format template")
-parser.add_argument("-j", "--join", dest="join", default="\n", help="Join Character")
 (args, remaining_argv) = parser.parse_known_args()
 
 uri = 'http://weather.yahooapis.com/forecastrss?%s'
@@ -178,7 +180,9 @@ results = {
 }
 
 if args.template:
-    print args.template.format(**results)
+    for template in args.template:
+        print template.format(**results)
 else:
-    print args.join.join(results[x] for x in remaining_argv)
+    for data in remaining_argv:
+        print results[data]
 
